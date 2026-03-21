@@ -1,0 +1,96 @@
+#!/usr/bin/env bash
+set -eo pipefail
+
+IMAGE_NAME="${CHAINBOX_IMAGE:-7feilee/chainbox}"
+CONTAINER_USER="${CHAINBOX_USER:-agent}"
+
+usage() {
+    echo "Usage: chainbox [OPTIONS] [DIRECTORY]"
+    echo ""
+    echo "Launch a chainbox container with DIRECTORY mounted (default: current directory)."
+    echo ""
+    echo "Options:"
+    echo "  -e KEY=VALUE    Pass environment variable to container (repeatable)"
+    echo "  -p HOST:CONT    Publish container port (repeatable)"
+    echo "  -v HOST:CONT    Bind mount additional volume (repeatable)"
+    echo "  --name NAME     Assign a name to the container"
+    echo "  --keep          Don't auto-remove container on exit"
+    echo "  --no-claude     Don't auto-mount Claude config or pass API key"
+    echo "  -h, --help      Show this help message"
+    echo ""
+    echo "Claude Code:"
+    echo "  ANTHROPIC_API_KEY is auto-forwarded if set in your shell."
+    echo "  ~/.claude is auto-mounted for OAuth token and session persistence."
+    echo "  Use --no-claude to disable this behavior."
+    echo ""
+    echo "Environment variables:"
+    echo "  CHAINBOX_IMAGE       Docker image (default: 7feilee/chainbox)"
+    echo "  CHAINBOX_USER        Container username (default: agent)"
+    echo "  ANTHROPIC_API_KEY    Anthropic API key (auto-forwarded to container)"
+    echo ""
+    echo "Examples:"
+    echo "  chainbox                                              # Mount current dir"
+    echo "  chainbox ~/projects/my-contract                       # Mount specific dir"
+    echo "  chainbox -p 8545:8545 .                               # Expose Anvil port"
+    echo "  chainbox -p 8545:8545 -p 3000:3000 .                  # Multiple ports"
+    echo "  chainbox -v \$HOME/.ssh:/home/\$CHAINBOX_USER/.ssh .    # Mount SSH keys"
+    echo "  chainbox --no-claude .                                 # Skip Claude auto-config"
+    echo ""
+    echo "Custom username (must match the USERNAME build arg used in Dockerfile):"
+    echo "  CHAINBOX_USER=myname chainbox .                        # Use custom username"
+}
+
+DOCKER_ARGS=()
+REMOVE="--rm"
+AUTO_CLAUDE=true
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -e)     DOCKER_ARGS+=("-e" "$2"); shift 2 ;;
+        -e*)    DOCKER_ARGS+=("$1"); shift ;;
+        -p)     DOCKER_ARGS+=("-p" "$2"); shift 2 ;;
+        -p*)    DOCKER_ARGS+=("$1"); shift ;;
+        -v)     DOCKER_ARGS+=("-v" "$2"); shift 2 ;;
+        -v*)    DOCKER_ARGS+=("$1"); shift ;;
+        --name) DOCKER_ARGS+=("--name" "$2"); shift 2 ;;
+        --keep) REMOVE=""; shift ;;
+        --no-claude) AUTO_CLAUDE=false; shift ;;
+        -h|--help) usage; exit 0 ;;
+        -*) echo "Unknown option: $1"; usage; exit 1 ;;
+        *)  break ;;
+    esac
+done
+
+USER_HOME="/home/${CONTAINER_USER}"
+
+# --- Claude Code auto-configuration ---
+if [[ "$AUTO_CLAUDE" == true ]]; then
+    # Forward ANTHROPIC_API_KEY if set in host
+    if [[ -n "$ANTHROPIC_API_KEY" ]]; then
+        DOCKER_ARGS+=("-e" "ANTHROPIC_API_KEY=$ANTHROPIC_API_KEY")
+    fi
+
+    # Mount host ~/.claude for OAuth tokens and session persistence
+    HOST_CLAUDE_DIR="$HOME/.claude"
+    if [[ ! -d "$HOST_CLAUDE_DIR" ]]; then
+        mkdir -p "$HOST_CLAUDE_DIR"
+    fi
+    DOCKER_ARGS+=("-v" "$HOST_CLAUDE_DIR:${USER_HOME}/.claude")
+
+    # Forward additional Claude-related env vars if set
+    [[ -n "$ANTHROPIC_AUTH_TOKEN" ]] && DOCKER_ARGS+=("-e" "ANTHROPIC_AUTH_TOKEN=$ANTHROPIC_AUTH_TOKEN")
+    [[ -n "$ANTHROPIC_MODEL" ]] && DOCKER_ARGS+=("-e" "ANTHROPIC_MODEL=$ANTHROPIC_MODEL")
+    [[ -n "$CLAUDE_CODE_USE_BEDROCK" ]] && DOCKER_ARGS+=("-e" "CLAUDE_CODE_USE_BEDROCK=$CLAUDE_CODE_USE_BEDROCK")
+    [[ -n "$CLAUDE_CODE_USE_VERTEX" ]] && DOCKER_ARGS+=("-e" "CLAUDE_CODE_USE_VERTEX=$CLAUDE_CODE_USE_VERTEX")
+fi
+
+DIR="${1:-.}"
+DIR="$(realpath "$DIR")"
+DIRNAME="$(basename "$DIR")"
+TARGET="${USER_HOME}/${DIRNAME}"
+
+exec docker run ${REMOVE} -it \
+    -v "$DIR:$TARGET" \
+    -w "$TARGET" \
+    "${DOCKER_ARGS[@]}" \
+    "${IMAGE_NAME}"

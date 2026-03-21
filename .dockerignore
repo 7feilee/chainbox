@@ -1,0 +1,9 @@
+.git
+.gitmodules
+.gitignore
+.dockerignore
+.env
+.env.*
+*.md
+LICENSE
+token-vault

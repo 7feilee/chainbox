@@ -1,0 +1,33 @@
+services:
+  chainbox:
+    image: ${CHAINBOX_IMAGE:-7feilee/chainbox}
+    build:
+      context: .
+      args:
+        USERNAME: ${CHAINBOX_USER:-agent}
+    stdin_open: true
+    tty: true
+    working_dir: /home/${CHAINBOX_USER:-agent}/workspace
+    volumes:
+      # Mount your project directory
+      - ${PROJECT_DIR:-.}:/home/${CHAINBOX_USER:-agent}/workspace
+      # Persist Claude Code credentials and session history
+      - ${HOME}/.claude:/home/${CHAINBOX_USER:-agent}/.claude
+    environment:
+      # Claude Code authentication (set in .env or shell)
+      - ANTHROPIC_API_KEY
+      - ANTHROPIC_AUTH_TOKEN
+      - ANTHROPIC_MODEL
+      # Cloud provider backends (optional)
+      - CLAUDE_CODE_USE_BEDROCK
+      - CLAUDE_CODE_USE_VERTEX
+      # Blockchain RPC endpoints (optional)
+      - ETH_RPC_URL
+      # Certora (optional)
+      - CERTORAKEY
+    # Expose common ports: Anvil (8545), dev server (3000), HMR (8080)
+    # Uncomment the ports you need:
+    # ports:
+    #   - "8545:8545"
+    #   - "3000:3000"
+    #   - "8080:8080"
