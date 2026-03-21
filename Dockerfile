@@ -12,7 +12,7 @@ LABEL org.opencontainers.image.licenses="MIT"
 RUN apt-get update && \
     apt-get install -y --no-install-recommends \
     bash-completion ca-certificates curl git gnupg htop less locales-all man-db \
-    openssh-server psmisc python3-venv rsync sudo tmux vim wget iftop iotop \
+    openssh-server psmisc python3-dev python3-venv rsync sudo tmux vim wget iftop iotop \
     build-essential zsh fio smartmontools apache2-utils \
     cloc cmake make gdb jq ncdu progress rclone strace socat binutils \
     dnsutils whois mtr lftp iperf3 ranger tcpdump zstd ffmpeg exiftool \
@@ -116,10 +116,10 @@ RUN uv tool install halmos
 RUN uv tool install certora-cli
 
 # Aderyn — fast Rust-based Solidity static analysis (Cyfrin)
-RUN cargo install aderyn --locked
+RUN cargo install aderyn
 
 # Heimdall-rs — EVM bytecode decompiler and reverse engineering toolkit
-RUN cargo install heimdall-rs --locked
+RUN curl -L https://get.heimdall.rs | bash && $HOME/.bifrost/bin/bifrost
 
 # Medusa — coverage-guided smart contract fuzzer (Trail of Bits)
 RUN go install github.com/crytic/medusa@latest
