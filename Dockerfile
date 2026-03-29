@@ -139,6 +139,10 @@ RUN uv tool install ipython --with web3 --with eth-abi --with eth-utils
 # AI-Assisted Development
 # ========================
 
+# Bun — JS/TS runtime (required by Claude Code Telegram plugin MCP server)
+RUN curl -fsSL https://bun.sh/install | bash
+ENV PATH=$HOME/.bun/bin:$PATH
+
 # Claude Code CLI (Anthropic)
 RUN source ~/.nvm/nvm.sh && npm install -g @anthropic-ai/claude-code
 
