@@ -16,7 +16,7 @@ RUN apt-get update && \
     build-essential zsh fio smartmontools apache2-utils \
     cloc cmake make gdb jq ncdu progress rclone strace socat binutils \
     dnsutils whois mtr lftp iperf3 ranger tcpdump zstd ffmpeg exiftool \
-    netcat-openbsd p7zip sqlite3 \
+    netcat-openbsd p7zip sqlite3 unzip \
     libffi-dev libffi8 libgmp-dev libgmp10 libncurses-dev libncurses6 libtinfo6 pkg-config \
     libssl-dev libleveldb-dev && \
     rm -rf /var/lib/apt/lists/*
